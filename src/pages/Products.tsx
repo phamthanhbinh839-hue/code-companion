@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
-import HeroSlider from "@/components/ui/HeroSlider";
 import ProductCard, { Product } from "@/components/products/ProductCard";
-import NotificationModal from "@/components/ui/NotificationModal";
-import { Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Search, Loader2 } from "lucide-react";
 
-// Mock data - sẽ được thay thế bằng Supabase
+// Mock data
 const mockProducts: Product[] = [
   {
     id: 1,
@@ -41,30 +40,12 @@ const mockProducts: Product[] = [
   },
 ];
 
-const mockSliderImages = [
-  "https://i.imgur.com/8AG01M4.jpg",
-  "https://i.imgur.com/Je1CPro.jpg",
-];
-
-const mockNotification = `
-<p style="text-align: center;">
-  <b><span style="color: #3b82f6;">Chào mừng bạn đến với dịch vụ của chúng tôi</span></b>
-</p>
-<p style="text-align: center;">
-  Hệ thống bán mã nguồn website chất lượng
-</p>
-<p style="text-align: center;">
-  <b>Liên hệ hỗ trợ: <a href="https://zalo.me/0978009289" target="_blank" style="color: #3b82f6;">Tại đây</a></b>
-</p>
-`;
-
-const Index = () => {
+const Products = () => {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
-  const [showNotification, setShowNotification] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    // Simulate loading
     const timer = setTimeout(() => {
       setProducts(mockProducts);
       setLoading(false);
@@ -73,30 +54,35 @@ const Index = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  const filteredProducts = products.filter((product) =>
+    product.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <MainLayout>
-      {/* Notification Modal */}
-      <NotificationModal
-        content={mockNotification}
-        isOpen={showNotification}
-        onClose={() => setShowNotification(false)}
-      />
-
-      {/* Hero Slider */}
-      <section className="py-6">
-        <div className="w-full max-w-6xl mx-auto px-4">
-          <HeroSlider images={mockSliderImages} />
-        </div>
-      </section>
-
-      {/* Products Section */}
-      <section className="py-10 px-4">
+      <div className="py-8 px-4">
         <div className="w-full max-w-6xl mx-auto">
+          {/* Header */}
           <div className="text-center mb-8">
-            <h2 className="section-title">MÃ NGUỒN CỦA CHÚNG TÔI</h2>
+            <h1 className="section-title">DANH SÁCH MÃ NGUỒN</h1>
             <div className="w-40 border-2 border-primary mx-auto mt-2"></div>
           </div>
 
+          {/* Search */}
+          <div className="mb-6">
+            <div className="relative max-w-md mx-auto">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Tìm kiếm mã nguồn..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+
+          {/* Products Grid */}
           {loading ? (
             <div className="flex justify-center py-12">
               <div className="flex flex-col items-center gap-3">
@@ -106,21 +92,25 @@ const Index = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {products.map((product) => (
+              {filteredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
           )}
 
-          {!loading && products.length === 0 && (
+          {!loading && filteredProducts.length === 0 && (
             <div className="text-center py-12">
-              <p className="text-muted-foreground">Chưa có sản phẩm nào.</p>
+              <p className="text-muted-foreground">
+                {searchTerm
+                  ? `Không tìm thấy sản phẩm nào với từ khóa "${searchTerm}"`
+                  : "Chưa có sản phẩm nào."}
+              </p>
             </div>
           )}
         </div>
-      </section>
+      </div>
     </MainLayout>
   );
 };
 
-export default Index;
+export default Products;
