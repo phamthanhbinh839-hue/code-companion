@@ -237,6 +237,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      purchase_tool: { Args: { p_tool_id: string }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "user"
