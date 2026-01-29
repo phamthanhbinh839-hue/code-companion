@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   ArrowLeft, 
   Eye, 
@@ -10,105 +11,117 @@ import {
   ExternalLink, 
   Loader2,
   ChevronLeft,
-  ChevronRight 
+  ChevronRight,
+  Wrench,
+  Download
 } from "lucide-react";
 
-interface ProductDetail {
-  id: number;
+interface ToolDetail {
+  id: string;
   name: string;
+  description: string | null;
   price: number;
-  images: string;
-  list_images: string;
-  intro: string;
-  view: number;
-  sold: number;
-  link_demo: string;
+  image_url: string | null;
+  demo_url: string | null;
+  download_url: string | null;
+  view_count: number;
+  sold_count: number;
 }
-
-// Mock data
-const mockProductDetails: Record<number, ProductDetail> = {
-  1: {
-    id: 1,
-    name: "CODE CHECKSCAM GIỐNG ADMIN.VN",
-    price: 0,
-    images: "https://i.imgur.com/PKy0Bhm.png",
-    list_images: "https://i.imgur.com/PKy0Bhm.png",
-    intro: "<p>Code có key log anh em tự tìm nhé</p>",
-    view: 7,
-    sold: 0,
-    link_demo: "https://admin.vn/",
-  },
-  2: {
-    id: 2,
-    name: "CODE CLMM BẢN NODE JS V1",
-    price: 0,
-    images: "https://i.imgur.com/lNl0CEP.png",
-    list_images: "https://i.imgur.com/lNl0CEP.png",
-    intro: "<p>Cần hỗ trợ ib tele @DuyKhanhRealL</p>",
-    view: 3,
-    sold: 0,
-    link_demo: "https://dichvuright.io.vn/",
-  },
-  3: {
-    id: 3,
-    name: "CODE CLONE V6 BẢN CŨ CỦA TUẤN ORI",
-    price: 0,
-    images: "https://i.imgur.com/eyvWNvF.png",
-    list_images: "https://i.imgur.com/eyvWNvF.png\nhttps://i.imgur.com/9xd5kEQ.png\nhttps://i.imgur.com/G8PcmX5.jpg",
-    intro: "<p>Cần hỗ trợ ib @DuyKhanhRealL</p>",
-    view: 1,
-    sold: 0,
-    link_demo: "https://dichvuright.io.vn/",
-  },
-  4: {
-    id: 4,
-    name: "CODE BÁN HOSTING CỦA TUẤN ORI V1",
-    price: 0,
-    images: "https://i.imgur.com/n3xe1Cu.png",
-    list_images: "https://i.imgur.com/n3xe1Cu.png\nhttps://i.imgur.com/tT0KIcq.png",
-    intro: "<p>Cần hỗ trợ ib @DuykhanhRealL</p>",
-    view: 0,
-    sold: 0,
-    link_demo: "https://hosting2w.vn/",
-  },
-};
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [loading, setLoading] = useState(true);
-  const [product, setProduct] = useState<ProductDetail | null>(null);
+  const [tool, setTool] = useState<ToolDetail | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const { toast } = useToast();
 
-  const productId = id ? parseInt(id) : 0;
-
   useEffect(() => {
-    const timer = setTimeout(() => {
-      const foundProduct = mockProductDetails[productId];
-      if (foundProduct) {
-        setProduct(foundProduct);
+    const fetchTool = async () => {
+      if (!id) {
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('tools')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error || !data) {
+        setTool(null);
+      } else {
+        setTool({
+          id: data.id,
+          name: data.name,
+          description: data.description,
+          price: Number(data.price),
+          image_url: data.image_url,
+          demo_url: data.demo_url,
+          download_url: data.download_url,
+          view_count: data.view_count,
+          sold_count: data.sold_count,
+        });
       }
       setLoading(false);
-    }, 500);
+    };
 
-    return () => clearTimeout(timer);
-  }, [productId]);
+    fetchTool();
+  }, [id]);
 
   const formatMoney = (amount: number) => {
     return new Intl.NumberFormat("vi-VN").format(amount);
   };
 
-  const handleAddToCart = () => {
-    toast({
-      title: "Thành công",
-      description: "Đã thêm sản phẩm vào giỏ hàng!",
-    });
+  const handleAddToCart = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      toast({
+        title: "Thông báo",
+        description: "Vui lòng đăng nhập để thêm vào giỏ hàng",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('cart_items')
+      .upsert({
+        user_id: session.user.id,
+        tool_id: id,
+        quantity: 1,
+      });
+
+    if (error) {
+      toast({
+        title: "Lỗi",
+        description: "Không thể thêm vào giỏ hàng",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Thành công",
+        description: "Đã thêm tool vào giỏ hàng!",
+      });
+    }
   };
 
-  const handleBuyNow = () => {
+  const handleBuyNow = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      toast({
+        title: "Thông báo",
+        description: "Vui lòng đăng nhập để mua hàng",
+        variant: "destructive",
+      });
+      return;
+    }
+
     toast({
       title: "Thông báo",
-      description: "Vui lòng đăng nhập để mua hàng (Demo mode)",
+      description: "Chức năng thanh toán đang được phát triển",
     });
   };
 
@@ -122,11 +135,11 @@ const ProductDetail = () => {
     );
   }
 
-  if (!product) {
+  if (!tool) {
     return (
       <MainLayout>
         <div className="py-12 px-4 text-center">
-          <h1 className="text-2xl font-bold mb-4">Không tìm thấy sản phẩm</h1>
+          <h1 className="text-2xl font-bold mb-4">Không tìm thấy tool</h1>
           <Link to="/products">
             <Button variant="outline">
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -138,7 +151,7 @@ const ProductDetail = () => {
     );
   }
 
-  const imageList = product.list_images.split("\n").filter(Boolean);
+  const imageList = tool.image_url ? [tool.image_url] : ['https://via.placeholder.com/400'];
 
   return (
     <MainLayout>
@@ -147,7 +160,7 @@ const ProductDetail = () => {
           {/* Back button */}
           <Link
             to="/products"
-            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6"
+            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 hover:scale-105 transition-transform"
           >
             <ArrowLeft className="h-4 w-4" />
             Quay lại danh sách
@@ -155,11 +168,11 @@ const ProductDetail = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Image Gallery */}
-            <div className="space-y-4">
+            <div className="space-y-4 animate-fade-in">
               <div className="relative rounded-lg overflow-hidden bg-secondary">
                 <img
                   src={imageList[currentImageIndex]}
-                  alt={product.name}
+                  alt={tool.name}
                   className="w-full h-80 object-contain"
                 />
                 {imageList.length > 1 && (
@@ -170,7 +183,7 @@ const ProductDetail = () => {
                           prev > 0 ? prev - 1 : imageList.length - 1
                         )
                       }
-                      className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/80 hover:bg-background"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/80 hover:bg-background hover:scale-110 transition-all"
                     >
                       <ChevronLeft className="h-5 w-5" />
                     </button>
@@ -180,7 +193,7 @@ const ProductDetail = () => {
                           prev < imageList.length - 1 ? prev + 1 : 0
                         )
                       }
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/80 hover:bg-background"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/80 hover:bg-background hover:scale-110 transition-all"
                     >
                       <ChevronRight className="h-5 w-5" />
                     </button>
@@ -195,7 +208,7 @@ const ProductDetail = () => {
                     <button
                       key={index}
                       onClick={() => setCurrentImageIndex(index)}
-                      className={`flex-shrink-0 w-16 h-16 rounded border-2 overflow-hidden ${
+                      className={`flex-shrink-0 w-16 h-16 rounded border-2 overflow-hidden hover:scale-105 transition-transform ${
                         index === currentImageIndex
                           ? "border-primary"
                           : "border-border"
@@ -213,68 +226,86 @@ const ProductDetail = () => {
             </div>
 
             {/* Product Info */}
-            <div className="space-y-6">
+            <div className="space-y-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
               <div>
-                <span className="v-badge bg-primary text-primary-foreground mb-2 inline-block">
-                  #{product.id}
+                <span className="v-badge bg-primary text-primary-foreground mb-2 inline-flex items-center gap-1">
+                  <Wrench className="h-3 w-3" />
+                  TOOL
                 </span>
                 <h1 className="text-2xl font-bold text-foreground uppercase">
-                  {product.name}
+                  {tool.name}
                 </h1>
               </div>
 
               <div className="flex items-center gap-6 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Eye className="h-4 w-4" />
-                  Lượt xem: {product.view}
+                  Lượt xem: {tool.view_count}
                 </span>
                 <span className="flex items-center gap-1">
                   <ShoppingCart className="h-4 w-4" />
-                  Lượt mua: {product.sold}
+                  Lượt mua: {tool.sold_count}
                 </span>
               </div>
 
               <div className="text-3xl font-bold text-primary">
-                {product.price === 0 ? "Miễn phí" : `${formatMoney(product.price)} đ`}
+                {tool.price === 0 ? "Miễn phí" : `${formatMoney(tool.price)} đ`}
               </div>
 
               {/* Description */}
               <div className="v-card p-4">
-                <h3 className="font-bold mb-2">Mô tả sản phẩm</h3>
-                <div
-                  className="prose prose-sm max-w-none text-muted-foreground"
-                  dangerouslySetInnerHTML={{ __html: product.intro }}
-                />
+                <h3 className="font-bold mb-2">Mô tả Tool</h3>
+                {tool.description ? (
+                  <div
+                    className="prose prose-sm max-w-none text-muted-foreground"
+                    dangerouslySetInnerHTML={{ __html: tool.description }}
+                  />
+                ) : (
+                  <p className="text-muted-foreground">Chưa có mô tả</p>
+                )}
               </div>
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-3">
-                <Button onClick={handleBuyNow} className="flex-1" size="lg">
+                <Button onClick={handleBuyNow} className="flex-1 hover:scale-[1.02] transition-transform" size="lg">
                   <ShoppingCart className="h-5 w-5 mr-2" />
                   Mua Ngay
                 </Button>
                 <Button
                   onClick={handleAddToCart}
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 hover:scale-[1.02] transition-transform"
                   size="lg"
                 >
                   Thêm vào giỏ hàng
                 </Button>
               </div>
 
-              {/* Demo Link */}
-              {product.link_demo && (
-                <a
-                  href={product.link_demo}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-primary hover:underline"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Xem Demo
-                </a>
-              )}
+              {/* Links */}
+              <div className="flex flex-col gap-2">
+                {tool.demo_url && (
+                  <a
+                    href={tool.demo_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-primary hover:underline hover:scale-105 transition-transform w-fit"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Xem Demo
+                  </a>
+                )}
+                {tool.download_url && tool.price === 0 && (
+                  <a
+                    href={tool.download_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-green-500 hover:underline hover:scale-105 transition-transform w-fit"
+                  >
+                    <Download className="h-4 w-4" />
+                    Tải xuống
+                  </a>
+                )}
+              </div>
             </div>
           </div>
         </div>

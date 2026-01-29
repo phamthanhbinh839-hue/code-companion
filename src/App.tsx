@@ -12,8 +12,8 @@ import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
 import Profile from "./pages/Profile";
-import RechargeCard from "./pages/RechargeCard";
 import RechargeBank from "./pages/RechargeBank";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,21 +42,22 @@ const App = () => (
           {/* User Profile */}
           <Route path="/profile" element={<Profile />} />
           
-          {/* Recharge Routes */}
-          <Route path="/recharge/card" element={<RechargeCard />} />
+          {/* Recharge */}
           <Route path="/recharge/bank" element={<RechargeBank />} />
           
-          {/* Legacy routes from PHP - redirect to new paths */}
+          {/* Admin */}
+          <Route path="/admin" element={<Admin />} />
+          
+          {/* Legacy routes */}
           <Route path="/client/login" element={<Login />} />
           <Route path="/client/register" element={<Register />} />
           <Route path="/client/list-code" element={<Products />} />
           <Route path="/client/view-code/:id" element={<ProductDetail />} />
           <Route path="/client/cart" element={<Cart />} />
           <Route path="/client/user-profile" element={<Profile />} />
-          <Route path="/client/recharge-card" element={<RechargeCard />} />
           <Route path="/client/recharge" element={<RechargeBank />} />
           
-          {/* 404 - Keep this last */}
+          {/* 404 */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
