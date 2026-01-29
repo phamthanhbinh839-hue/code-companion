@@ -3,22 +3,29 @@ import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Copy, CheckCircle, Wallet, QrCode } from "lucide-react";
+import { Copy, CheckCircle, Wallet, QrCode, RefreshCw, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { Link } from "react-router-dom";
 
 const bankInfo = {
   bank_name: "Vietcombank",
   short_name: "VCB",
-  account_number: "0978009289",
-  account_name: "NGUYEN DUY KHANH",
-  transfer_content: "dichvuright",
+  account_number: "1042986008",
+  account_name: "PHAM THANH BINH",
   min_amount: 10000,
 };
 
 const RechargeBank = () => {
+  const { profile, user } = useAuth();
   const [amount, setAmount] = useState("");
   const [copied, setCopied] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
   const { toast } = useToast();
+
+  // Transfer content is "vietool" + username
+  const transferContent = profile ? `vietool${profile.username}` : "";
 
   const formatMoney = (amount: number) => {
     return new Intl.NumberFormat("vi-VN").format(amount);
@@ -42,7 +49,59 @@ const RechargeBank = () => {
     }
   };
 
+  const handleCheckTransaction = async () => {
+    setChecking(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("check-bank-transactions");
+      
+      if (error) {
+        toast({
+          title: "Lỗi",
+          description: "Không thể kiểm tra giao dịch",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Đã kiểm tra",
+          description: data.processed > 0 
+            ? `Đã xử lý ${data.processed} giao dịch` 
+            : "Không có giao dịch mới",
+        });
+      }
+    } catch (err) {
+      toast({
+        title: "Lỗi",
+        description: "Không thể kết nối đến server",
+        variant: "destructive",
+      });
+    } finally {
+      setChecking(false);
+    }
+  };
+
   const quickAmounts = [10000, 20000, 50000, 100000, 200000, 500000];
+
+  // Show login prompt if not logged in
+  if (!user) {
+    return (
+      <MainLayout>
+        <div className="py-8 px-4">
+          <div className="w-full max-w-md mx-auto text-center">
+            <div className="v-card p-8">
+              <AlertCircle className="h-12 w-12 text-warning mx-auto mb-4" />
+              <h2 className="text-xl font-bold mb-2">Vui lòng đăng nhập</h2>
+              <p className="text-muted-foreground mb-4">
+                Bạn cần đăng nhập để nạp tiền vào tài khoản
+              </p>
+              <Link to="/login">
+                <Button className="w-full">Đăng nhập</Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -81,7 +140,7 @@ const RechargeBank = () => {
                     <p className="font-bold text-primary">{bankInfo.account_number}</p>
                   </div>
                   {copied === "account" ? (
-                    <CheckCircle className="h-5 w-5 text-success" />
+                    <CheckCircle className="h-5 w-5 text-green-500" />
                   ) : (
                     <Copy className="h-5 w-5 text-muted-foreground" />
                   )}
@@ -95,17 +154,17 @@ const RechargeBank = () => {
                 </div>
 
                 <div
-                  className="flex justify-between items-center p-3 bg-secondary rounded cursor-pointer hover:bg-secondary/80"
-                  onClick={() => copyToClipboard(bankInfo.transfer_content, "content")}
+                  className="flex justify-between items-center p-3 bg-primary/10 border border-primary rounded cursor-pointer hover:bg-primary/20"
+                  onClick={() => copyToClipboard(transferContent, "content")}
                 >
                   <div>
                     <p className="text-sm text-muted-foreground">Nội dung chuyển khoản</p>
-                    <p className="font-bold text-primary">{bankInfo.transfer_content}</p>
+                    <p className="font-bold text-primary text-lg">{transferContent}</p>
                   </div>
                   {copied === "content" ? (
-                    <CheckCircle className="h-5 w-5 text-success" />
+                    <CheckCircle className="h-5 w-5 text-green-500" />
                   ) : (
-                    <Copy className="h-5 w-5 text-muted-foreground" />
+                    <Copy className="h-5 w-5 text-primary" />
                   )}
                 </div>
               </div>
@@ -153,6 +212,20 @@ const RechargeBank = () => {
                     </p>
                   </div>
                 )}
+
+                <Button 
+                  onClick={handleCheckTransaction} 
+                  disabled={checking}
+                  variant="outline"
+                  className="w-full"
+                >
+                  {checking ? (
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                  )}
+                  Kiểm tra giao dịch
+                </Button>
               </div>
             </div>
           </div>
@@ -174,7 +247,7 @@ const RechargeBank = () => {
                   2
                 </span>
                 <span>
-                  Nội dung chuyển khoản ghi: <strong>{bankInfo.transfer_content}</strong>
+                  Nội dung chuyển khoản ghi: <strong className="text-primary">{transferContent}</strong>
                 </span>
               </li>
               <li className="flex gap-3">
@@ -185,9 +258,9 @@ const RechargeBank = () => {
               </li>
             </ol>
 
-            <div className="mt-4 p-4 bg-warning/10 rounded-lg border border-warning/30">
+            <div className="mt-4 p-4 bg-yellow-500/10 rounded-lg border border-yellow-500/30">
               <p className="text-sm text-muted-foreground">
-                <strong className="text-warning">Lưu ý:</strong> Nếu sau 10 phút không nhận được tiền, 
+                <strong className="text-yellow-500">Lưu ý:</strong> Nếu sau 10 phút không nhận được tiền, 
                 vui lòng liên hệ hỗ trợ kèm ảnh chụp giao dịch.
               </p>
             </div>

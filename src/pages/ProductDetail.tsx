@@ -107,6 +107,9 @@ const ProductDetail = () => {
     }
   };
 
+  const [purchasing, setPurchasing] = useState(false);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+
   const handleBuyNow = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     
@@ -119,10 +122,48 @@ const ProductDetail = () => {
       return;
     }
 
-    toast({
-      title: "Thông báo",
-      description: "Chức năng thanh toán đang được phát triển",
-    });
+    setPurchasing(true);
+
+    try {
+      const { data, error } = await supabase.rpc('purchase_tool', {
+        p_tool_id: id
+      });
+
+      if (error) {
+        toast({
+          title: "Lỗi",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const result = data as { success: boolean; message: string; download_url?: string; already_purchased?: boolean };
+
+      if (result.success) {
+        toast({
+          title: result.already_purchased ? "Thông báo" : "Thành công",
+          description: result.message,
+        });
+        if (result.download_url) {
+          setDownloadUrl(result.download_url);
+        }
+      } else {
+        toast({
+          title: "Không thể mua",
+          description: result.message,
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      toast({
+        title: "Lỗi",
+        description: "Đã xảy ra lỗi. Vui lòng thử lại.",
+        variant: "destructive",
+      });
+    } finally {
+      setPurchasing(false);
+    }
   };
 
   if (loading) {
@@ -267,9 +308,18 @@ const ProductDetail = () => {
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-3">
-                <Button onClick={handleBuyNow} className="flex-1 hover:scale-[1.02] transition-transform" size="lg">
-                  <ShoppingCart className="h-5 w-5 mr-2" />
-                  Mua Ngay
+                <Button 
+                  onClick={handleBuyNow} 
+                  className="flex-1 hover:scale-[1.02] transition-transform" 
+                  size="lg"
+                  disabled={purchasing}
+                >
+                  {purchasing ? (
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                  ) : (
+                    <ShoppingCart className="h-5 w-5 mr-2" />
+                  )}
+                  {tool.price === 0 ? "Nhận Miễn Phí" : "Mua Ngay"}
                 </Button>
                 <Button
                   onClick={handleAddToCart}
@@ -280,6 +330,22 @@ const ProductDetail = () => {
                   Thêm vào giỏ hàng
                 </Button>
               </div>
+
+              {/* Download URL after purchase */}
+              {downloadUrl && (
+                <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
+                  <p className="text-sm font-bold text-green-500 mb-2">🎉 Mua thành công!</p>
+                  <a
+                    href={downloadUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-green-500 hover:underline font-bold"
+                  >
+                    <Download className="h-4 w-4" />
+                    Tải xuống tool
+                  </a>
+                </div>
+              )}
 
               {/* Links */}
               <div className="flex flex-col gap-2">
