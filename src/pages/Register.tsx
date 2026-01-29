@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, LogIn } from "lucide-react";
+import { Loader2, LogIn, Wrench } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -37,6 +38,16 @@ const Register = () => {
       return;
     }
 
+    // Validate username - only alphanumeric
+    if (!/^[a-zA-Z0-9]+$/.test(formData.username)) {
+      toast({
+        title: "Lỗi",
+        description: "Tên tài khoản chỉ được chứa chữ cái và số",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       toast({
         title: "Lỗi",
@@ -57,22 +68,62 @@ const Register = () => {
 
     setLoading(true);
 
-    // Simulate registration - will be replaced with Supabase auth
-    setTimeout(() => {
+    // Check if username already exists
+    const { data: existingUser } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("username", formData.username.toLowerCase())
+      .single();
+
+    if (existingUser) {
       toast({
-        title: "Thành công",
-        description: "Đăng ký thành công! (Demo mode)",
+        title: "Lỗi",
+        description: "Tên tài khoản đã tồn tại",
+        variant: "destructive",
       });
       setLoading(false);
-      navigate("/login");
-    }, 1000);
+      return;
+    }
+
+    // Register with Supabase
+    const { error } = await supabase.auth.signUp({
+      email: formData.email,
+      password: formData.password,
+      options: {
+        data: {
+          username: formData.username.toLowerCase(),
+        },
+      },
+    });
+
+    if (error) {
+      toast({
+        title: "Lỗi đăng ký",
+        description: error.message === "User already registered" 
+          ? "Email đã được sử dụng" 
+          : error.message,
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
+    toast({
+      title: "Thành công",
+      description: "Đăng ký thành công! Đang chuyển hướng...",
+    });
+    setLoading(false);
+    navigate("/");
   };
 
   return (
     <MainLayout>
       <div className="min-h-[calc(100vh-200px)] flex items-center justify-center px-4 py-8">
-        <div className="w-full max-w-sm">
-          <form onSubmit={handleRegister} className="v-card p-6">
+        <div className="w-full max-w-sm animate-scale-in">
+          <form onSubmit={handleRegister} className="v-card p-6 hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <Wrench className="h-8 w-8 text-primary" />
+            </div>
             <h1 className="text-2xl font-extrabold text-center text-foreground mb-1">
               ĐĂNG KÝ TÀI KHOẢN
             </h1>
@@ -86,12 +137,15 @@ const Register = () => {
                 <Input
                   id="username"
                   type="text"
-                  placeholder="Nhập tài khoản"
+                  placeholder="Nhập tài khoản (chữ và số)"
                   value={formData.username}
                   onChange={handleChange}
                   className="mt-1"
                   disabled={loading}
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Dùng cho nội dung chuyển khoản nạp tiền
+                </p>
               </div>
 
               <div>
@@ -116,7 +170,7 @@ const Register = () => {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Nhập mật khẩu"
+                  placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)"
                   value={formData.password}
                   onChange={handleChange}
                   className="mt-1"
@@ -142,7 +196,7 @@ const Register = () => {
               <div className="pt-2 space-y-3">
                 <Button
                   type="submit"
-                  className="w-full h-11 text-lg font-semibold"
+                  className="w-full h-11 text-lg font-semibold hover:scale-[1.02] transition-transform"
                   disabled={loading}
                 >
                   {loading ? (
@@ -157,7 +211,7 @@ const Register = () => {
 
                 <Link
                   to="/login"
-                  className="flex items-center justify-center gap-2 w-full h-11 border border-border rounded-md bg-card hover:bg-secondary transition-colors text-lg font-medium"
+                  className="flex items-center justify-center gap-2 w-full h-11 border border-border rounded-md bg-card hover:bg-secondary hover:scale-[1.02] transition-all text-lg font-medium"
                 >
                   <LogIn className="h-5 w-5" />
                   Đã có tài khoản? Đăng nhập
