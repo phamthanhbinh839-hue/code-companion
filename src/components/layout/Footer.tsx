@@ -1,4 +1,4 @@
-import { Facebook, MessageCircle, Phone, Mail } from "lucide-react";
+import { Facebook, MessageCircle, Phone, Mail, Send } from "lucide-react";
 
 interface FooterProps {
   settings?: {
@@ -7,6 +7,7 @@ interface FooterProps {
     email?: string;
     link_facebook?: string;
     link_zalo?: string;
+    link_telegram?: string;
   };
 }
 
@@ -20,11 +21,11 @@ export const Footer = ({ settings }: FooterProps) => {
           {/* About */}
           <div>
             <h3 className="font-bold text-lg mb-4 text-foreground">
-              {settings?.title || "DICHVULIGHT"}
+              {settings?.title || "VIETOOL"}
             </h3>
             <p className="text-muted-foreground text-sm">
-              Hệ thống bán mã nguồn website chất lượng tại Việt Nam. 
-              Chúng tôi cung cấp các giải pháp website uy tín, giá cả hợp lý.
+              Hệ thống bán tool chất lượng tại Việt Nam. 
+              Chúng tôi cung cấp các công cụ uy tín, giá cả hợp lý.
             </p>
           </div>
 
@@ -35,7 +36,7 @@ export const Footer = ({ settings }: FooterProps) => {
               {settings?.hotline && (
                 <li className="flex items-center gap-2 text-muted-foreground">
                   <Phone className="h-4 w-4" />
-                  <a href={`tel:${settings.hotline}`} className="hover:text-primary">
+                  <a href={`tel:${settings.hotline}`} className="hover:text-primary transition-colors">
                     {settings.hotline}
                   </a>
                 </li>
@@ -43,7 +44,7 @@ export const Footer = ({ settings }: FooterProps) => {
               {settings?.email && (
                 <li className="flex items-center gap-2 text-muted-foreground">
                   <Mail className="h-4 w-4" />
-                  <a href={`mailto:${settings.email}`} className="hover:text-primary">
+                  <a href={`mailto:${settings.email}`} className="hover:text-primary transition-colors">
                     {settings.email}
                   </a>
                 </li>
@@ -60,9 +61,21 @@ export const Footer = ({ settings }: FooterProps) => {
                   href={settings.link_facebook}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center w-10 h-10 rounded-full bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+                  className="flex items-center justify-center w-10 h-10 rounded-full bg-primary text-primary-foreground hover:scale-110 transition-transform"
+                  title="Facebook"
                 >
                   <Facebook className="h-5 w-5" />
+                </a>
+              )}
+              {settings?.link_telegram && (
+                <a
+                  href={settings.link_telegram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center w-10 h-10 rounded-full bg-[#0088cc] text-white hover:scale-110 transition-transform"
+                  title="Telegram"
+                >
+                  <Send className="h-5 w-5" />
                 </a>
               )}
               {settings?.link_zalo && (
@@ -70,7 +83,8 @@ export const Footer = ({ settings }: FooterProps) => {
                   href={settings.link_zalo}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center w-10 h-10 rounded-full bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+                  className="flex items-center justify-center w-10 h-10 rounded-full bg-primary text-primary-foreground hover:scale-110 transition-transform"
+                  title="Zalo"
                 >
                   <MessageCircle className="h-5 w-5" />
                 </a>
@@ -80,7 +94,7 @@ export const Footer = ({ settings }: FooterProps) => {
         </div>
 
         <div className="border-t border-border mt-8 pt-6 text-center text-sm text-muted-foreground">
-          <p>© {currentYear} {settings?.title || "DICHVULIGHT"}. All rights reserved.</p>
+          <p>© {currentYear} {settings?.title || "VIETOOL"}. All rights reserved.</p>
         </div>
       </div>
     </footer>

@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
-import { Eye, ShoppingCart } from "lucide-react";
+import { Eye, ShoppingCart, Wrench } from "lucide-react";
 
 export interface Product {
-  id: number;
+  id: string | number;
   name: string;
   price: number;
   images: string;
@@ -20,18 +20,20 @@ export const ProductCard = ({ product }: ProductCardProps) => {
   };
 
   return (
-    <div className="product-card fade-in">
-      <Link to={`/product/${product.id}`} className="block relative">
+    <div className="product-card fade-in group">
+      <Link to={`/product/${product.id}`} className="block relative overflow-hidden">
         <div className="relative">
           <img
             src={product.images}
             alt={product.name}
-            className="h-56 md:h-40 w-full object-cover object-center"
+            className="h-56 md:h-40 w-full object-cover object-center group-hover:scale-110 transition-transform duration-300"
             loading="lazy"
           />
-          <span className="absolute top-2 right-2 v-badge bg-primary text-primary-foreground">
-            #{product.id}
+          <span className="absolute top-2 right-2 v-badge bg-primary text-primary-foreground flex items-center gap-1">
+            <Wrench className="h-3 w-3" />
+            TOOL
           </span>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
       </Link>
 
@@ -53,11 +55,13 @@ export const ProductCard = ({ product }: ProductCardProps) => {
 
         <div className="grid grid-cols-2 gap-2">
           <div className="border border-primary rounded text-center py-1.5 px-2">
-            <span className="v-price text-sm">{formatMoney(product.price)} đ</span>
+            <span className="v-price text-sm">
+              {product.price === 0 ? "Miễn phí" : `${formatMoney(product.price)} đ`}
+            </span>
           </div>
           <Link
             to={`/product/${product.id}`}
-            className="bg-primary text-primary-foreground text-center py-1.5 px-2 rounded font-semibold text-sm hover:bg-primary/90 transition-colors uppercase"
+            className="bg-primary text-primary-foreground text-center py-1.5 px-2 rounded font-semibold text-sm hover:bg-primary/90 hover:scale-105 transition-all uppercase"
           >
             Chi tiết
           </Link>

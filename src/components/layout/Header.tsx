@@ -1,90 +1,72 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Menu, X, ShoppingCart, User, LogOut, ChevronDown, CreditCard, Wallet } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Menu, X, ShoppingCart, User, LogOut, Wallet, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface HeaderProps {
   user?: {
     username: string;
     money: number;
-    level: number;
   } | null;
   cartCount?: number;
   logo?: string;
+  isAdmin?: boolean;
 }
 
-export const Header = ({ user, cartCount = 0, logo }: HeaderProps) => {
+export const Header = ({ user, cartCount = 0, logo, isAdmin = false }: HeaderProps) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   const formatMoney = (amount: number) => {
     return new Intl.NumberFormat("vi-VN").format(amount);
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    toast({
+      title: "Đã đăng xuất",
+      description: "Hẹn gặp lại bạn!",
+    });
+    navigate("/");
+  };
+
   return (
-    <header className="sticky top-0 z-50 bg-card shadow">
+    <header className="sticky top-0 z-50 bg-card shadow-md backdrop-blur-sm">
       <div className="mx-auto w-full max-w-6xl px-4">
         <div className="flex items-center justify-between py-3">
           {/* Logo */}
-          <Link to="/" className="flex-shrink-0">
+          <Link to="/" className="flex-shrink-0 group">
             {logo ? (
-              <img src={logo} alt="Logo" className="h-10 w-auto max-w-[200px]" />
+              <img src={logo} alt="Logo" className="h-10 w-auto max-w-[200px] group-hover:scale-105 transition-transform" />
             ) : (
-              <span className="text-2xl font-bold text-primary">DICHVULIGHT</span>
+              <span className="text-2xl font-bold text-primary group-hover:text-primary/80 transition-colors flex items-center gap-2">
+                <Wrench className="h-7 w-7" />
+                VIETOOL
+              </span>
             )}
           </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-1">
-            <Link to="/" className="nav-link">
+            <Link to="/" className="nav-link hover:scale-105 transition-transform">
               TRANG CHỦ
             </Link>
 
-            {/* Nạp tiền dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger className="nav-link flex items-center gap-1">
-                NẠP TIỀN <ChevronDown className="h-4 w-4" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem asChild>
-                  <Link to="/recharge/card" className="flex items-center gap-2">
-                    <CreditCard className="h-4 w-4" />
-                    NẠP THẺ CÀO
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/recharge/bank" className="flex items-center gap-2">
-                    <Wallet className="h-4 w-4" />
-                    NẠP QUA VÍ/ATM
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <Link to="/products" className="nav-link">
-              MÃ NGUỒN
+            <Link to="/recharge/bank" className="nav-link flex items-center gap-1 hover:scale-105 transition-transform">
+              <Wallet className="h-4 w-4" />
+              NẠP TIỀN
             </Link>
 
-            {/* Dịch vụ dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger className="nav-link flex items-center gap-1">
-                DỊCH VỤ <ChevronDown className="h-4 w-4" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem asChild>
-                  <Link to="/services/cron">CRON JOB</Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Link to="/products" className="nav-link hover:scale-105 transition-transform">
+              TOOL
+            </Link>
 
-            {user?.level === 1 && (
-              <Link to="/admin" className="nav-link">
-                QUẢN TRỊ WEBSITE
+            {isAdmin && (
+              <Link to="/admin" className="nav-link text-primary hover:scale-105 transition-transform">
+                QUẢN TRỊ
               </Link>
             )}
           </nav>
@@ -93,43 +75,44 @@ export const Header = ({ user, cartCount = 0, logo }: HeaderProps) => {
           <div className="hidden lg:flex items-center gap-3">
             <Link
               to="/cart"
-              className="flex items-center gap-2 px-3 py-2 border border-border rounded-full hover:bg-secondary transition-colors"
+              className="flex items-center gap-2 px-3 py-2 border border-border rounded-full hover:bg-secondary hover:scale-105 transition-all"
             >
               <ShoppingCart className="h-4 w-4" />
-              <span className="font-bold">Giỏ hàng - ({cartCount})</span>
+              <span className="font-bold">Giỏ hàng ({cartCount})</span>
             </Link>
 
             {user ? (
               <>
                 <Link
                   to="/profile"
-                  className="flex items-center gap-2 px-3 py-2 border border-border rounded-full hover:bg-secondary transition-colors"
+                  className="flex items-center gap-2 px-3 py-2 border border-border rounded-full hover:bg-secondary hover:scale-105 transition-all"
                 >
                   <User className="h-4 w-4" />
                   <span className="font-bold">
                     {user.username} - {formatMoney(user.money)}đ
                   </span>
                 </Link>
-                <Link
-                  to="/logout"
-                  className="flex items-center gap-2 px-3 py-2 border border-border rounded-full hover:bg-secondary transition-colors"
+                <Button
+                  variant="ghost"
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 px-3 py-2 border border-border rounded-full hover:bg-destructive/10 hover:text-destructive hover:border-destructive transition-all"
                 >
                   <LogOut className="h-4 w-4" />
                   <span className="font-bold">Đăng xuất</span>
-                </Link>
+                </Button>
               </>
             ) : (
               <>
                 <Link
                   to="/login"
-                  className="flex items-center gap-2 px-3 py-2 border border-border rounded-full hover:bg-secondary transition-colors"
+                  className="flex items-center gap-2 px-3 py-2 border border-border rounded-full hover:bg-secondary hover:scale-105 transition-all"
                 >
                   <User className="h-4 w-4" />
                   <span className="font-bold">Đăng nhập</span>
                 </Link>
                 <Link
                   to="/register"
-                  className="flex items-center gap-2 px-3 py-2 border border-primary text-primary rounded-full hover:bg-primary hover:text-primary-foreground transition-colors"
+                  className="flex items-center gap-2 px-3 py-2 border border-primary text-primary rounded-full hover:bg-primary hover:text-primary-foreground hover:scale-105 transition-all"
                 >
                   <span className="font-bold">Đăng ký</span>
                 </Link>
@@ -178,40 +161,41 @@ export const Header = ({ user, cartCount = 0, logo }: HeaderProps) => {
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <nav className="lg:hidden pb-4 fade-in">
+          <nav className="lg:hidden pb-4 animate-fade-in">
             <div className="flex flex-col gap-2">
               <Link to="/" className="nav-link" onClick={() => setMobileMenuOpen(false)}>
                 TRANG CHỦ
               </Link>
-              <Link to="/recharge/card" className="nav-link" onClick={() => setMobileMenuOpen(false)}>
-                NẠP THẺ CÀO
-              </Link>
               <Link to="/recharge/bank" className="nav-link" onClick={() => setMobileMenuOpen(false)}>
-                NẠP QUA VÍ/ATM
+                NẠP TIỀN
               </Link>
               <Link to="/products" className="nav-link" onClick={() => setMobileMenuOpen(false)}>
-                MÃ NGUỒN
+                TOOL
               </Link>
-              <Link to="/services/cron" className="nav-link" onClick={() => setMobileMenuOpen(false)}>
-                CRON JOB
-              </Link>
+              {isAdmin && (
+                <Link to="/admin" className="nav-link text-primary" onClick={() => setMobileMenuOpen(false)}>
+                  QUẢN TRỊ
+                </Link>
+              )}
               <Link
                 to="/cart"
                 className="nav-link flex items-center gap-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 <ShoppingCart className="h-4 w-4" />
-                Giỏ hàng - ({cartCount})
+                Giỏ hàng ({cartCount})
               </Link>
               {user && (
-                <Link
-                  to="/logout"
-                  className="nav-link flex items-center gap-2"
-                  onClick={() => setMobileMenuOpen(false)}
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="nav-link flex items-center gap-2 text-destructive"
                 >
                   <LogOut className="h-4 w-4" />
                   Đăng xuất
-                </Link>
+                </button>
               )}
             </div>
           </nav>
