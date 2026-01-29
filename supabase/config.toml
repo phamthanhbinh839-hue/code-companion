@@ -1,1 +1,4 @@
 project_id = "gqsvvtvhfnzmgnqvuwuw"
+
+[functions.check-bank-transactions]
+verify_jwt = false

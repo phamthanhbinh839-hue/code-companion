@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import ImageUpload from "@/components/admin/ImageUpload";
 import {
   Table,
   TableBody,
@@ -286,14 +287,13 @@ const Admin = () => {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="image_url">URL Hình ảnh</Label>
-                    <Input
-                      id="image_url"
-                      value={formData.image_url}
-                      onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                      className="mt-1"
-                      placeholder="https://..."
-                    />
+                    <Label>Hình ảnh</Label>
+                    <div className="mt-1">
+                      <ImageUpload
+                        value={formData.image_url}
+                        onChange={(url) => setFormData({ ...formData, image_url: url })}
+                      />
+                    </div>
                   </div>
                   <div>
                     <Label htmlFor="demo_url">URL Demo</Label>
