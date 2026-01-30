@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,13 @@ const RechargeBank = () => {
 
   // Transfer content is "vietool" + username
   const transferContent = profile ? `vietool${profile.username}` : "";
+
+  // Generate QR code URL using SePay
+  const qrCodeUrl = useMemo(() => {
+    const amountNum = parseInt(amount) || 0;
+    const encodedContent = encodeURIComponent(transferContent);
+    return `https://qr.sepay.vn/img?acc=${bankInfo.account_number}&bank=${bankInfo.short_name}&amount=${amountNum}&des=${encodedContent}&template=qronly`;
+  }, [amount, transferContent]);
 
   const formatMoney = (amount: number) => {
     return new Intl.NumberFormat("vi-VN").format(amount);
@@ -116,14 +123,25 @@ const RechargeBank = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Bank Info */}
+            {/* Bank Info & QR Code */}
             <div className="v-card p-6">
               <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
                 <QrCode className="h-5 w-5" />
-                Thông tin chuyển khoản
+                Quét mã QR để nạp tiền
               </h3>
 
-              <div className="space-y-4">
+              {/* QR Code */}
+              <div className="flex justify-center mb-4">
+                <div className="p-3 bg-white rounded-lg">
+                  <img
+                    src={qrCodeUrl}
+                    alt="QR Code nạp tiền"
+                    className="w-48 h-48 object-contain"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3">
                 <div className="flex justify-between items-center p-3 bg-secondary rounded">
                   <div>
                     <p className="text-sm text-muted-foreground">Ngân hàng</p>
@@ -239,7 +257,7 @@ const RechargeBank = () => {
                   1
                 </span>
                 <span>
-                  Chuyển khoản đến số tài khoản <strong>{bankInfo.account_number}</strong> - {bankInfo.bank_name}
+                  Quét mã QR bằng app ngân hàng hoặc chuyển khoản đến <strong>{bankInfo.account_number}</strong> - {bankInfo.bank_name}
                 </span>
               </li>
               <li className="flex gap-3">
