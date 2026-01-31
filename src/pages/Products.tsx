@@ -6,6 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Search, Loader2, Wrench } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
+interface Category {
+  id: string;
+  name: string;
+}
+
 interface Tool {
   id: string;
   name: string;
@@ -19,8 +24,21 @@ interface Tool {
 const Products = () => {
   const [loading, setLoading] = useState(true);
   const [tools, setTools] = useState<Tool[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Fetch categories once
+    const fetchCategories = async () => {
+      const { data } = await supabase
+        .from('categories')
+        .select('id, name')
+        .eq('is_active', true);
+      if (data) setCategories(data);
+    };
+    fetchCategories();
+  }, []);
 
   useEffect(() => {
     const fetchTools = async () => {
@@ -45,6 +63,11 @@ const Products = () => {
 
     fetchTools();
   }, [selectedCategory]);
+
+  const getCategoryName = (categoryId: string | null) => {
+    if (!categoryId) return undefined;
+    return categories.find(c => c.id === categoryId)?.name;
+  };
 
   const filteredTools = tools.filter((tool) =>
     tool.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -110,6 +133,7 @@ const Products = () => {
                       images: tool.image_url || 'https://via.placeholder.com/300',
                       view: tool.view_count,
                       sold: tool.sold_count,
+                      categoryName: getCategoryName(tool.category_id),
                     }}
                   />
                 </div>
