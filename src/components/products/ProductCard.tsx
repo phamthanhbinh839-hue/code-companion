@@ -8,6 +8,7 @@ export interface Product {
   images: string;
   view: number;
   sold: number;
+  categoryName?: string;
 }
 
 interface ProductCardProps {
@@ -31,7 +32,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           />
           <span className="absolute top-2 right-2 v-badge bg-primary text-primary-foreground flex items-center gap-1">
             <Wrench className="h-3 w-3" />
-            TOOL
+            {product.categoryName || "TOOL"}
           </span>
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>

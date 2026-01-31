@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import ImageUpload from "@/components/admin/ImageUpload";
+import CategoryManager from "@/components/admin/CategoryManager";
 import {
   Table,
   TableBody,
@@ -24,6 +25,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Plus,
@@ -34,6 +43,7 @@ import {
   Wrench,
   Eye,
   ShoppingCart,
+  FolderOpen,
 } from "lucide-react";
 
 interface Tool {
@@ -48,6 +58,12 @@ interface Tool {
   sold_count: number;
   is_active: boolean;
   created_at: string;
+  category_id: string | null;
+}
+
+interface Category {
+  id: string;
+  name: string;
 }
 
 const Admin = () => {
@@ -56,6 +72,7 @@ const Admin = () => {
   const { toast } = useToast();
   
   const [tools, setTools] = useState<Tool[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTool, setEditingTool] = useState<Tool | null>(null);
@@ -67,6 +84,7 @@ const Admin = () => {
     demo_url: "",
     download_url: "",
     is_active: true,
+    category_id: "",
   });
 
   useEffect(() => {
@@ -83,6 +101,7 @@ const Admin = () => {
   useEffect(() => {
     if (isAdmin) {
       fetchTools();
+      fetchCategories();
     }
   }, [isAdmin]);
 
@@ -104,6 +123,24 @@ const Admin = () => {
     setLoading(false);
   };
 
+  const fetchCategories = async () => {
+    const { data } = await supabase
+      .from('categories')
+      .select('id, name')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
+
+    if (data) {
+      setCategories(data);
+    }
+  };
+
+  const getCategoryName = (categoryId: string | null) => {
+    if (!categoryId) return "-";
+    const category = categories.find(c => c.id === categoryId);
+    return category?.name || "-";
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -115,6 +152,7 @@ const Admin = () => {
       demo_url: formData.demo_url || null,
       download_url: formData.download_url || null,
       is_active: formData.is_active,
+      category_id: formData.category_id || null,
     };
 
     if (editingTool) {
@@ -192,6 +230,7 @@ const Admin = () => {
       demo_url: tool.demo_url || "",
       download_url: tool.download_url || "",
       is_active: tool.is_active,
+      category_id: tool.category_id || "",
     });
     setIsDialogOpen(true);
   };
@@ -206,6 +245,7 @@ const Admin = () => {
       demo_url: "",
       download_url: "",
       is_active: true,
+      category_id: "",
     });
   };
 
@@ -232,225 +272,269 @@ const Admin = () => {
       <div className="py-8 px-4">
         <div className="w-full max-w-6xl mx-auto">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <Shield className="h-8 w-8 text-primary" />
-              <h1 className="text-2xl font-bold">QUẢN TRỊ TOOL</h1>
-            </div>
-            <Dialog open={isDialogOpen} onOpenChange={(open) => {
-              setIsDialogOpen(open);
-              if (!open) resetForm();
-            }}>
-              <DialogTrigger asChild>
-                <Button className="flex items-center gap-2 hover:scale-105 transition-transform">
-                  <Plus className="h-4 w-4" />
-                  Thêm Tool
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <Wrench className="h-5 w-5" />
-                    {editingTool ? "Sửa Tool" : "Thêm Tool Mới"}
-                  </DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
-                    <Label htmlFor="name">Tên Tool *</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      required
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="description">Mô tả</Label>
-                    <Textarea
-                      id="description"
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      className="mt-1"
-                      rows={3}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="price">Giá (VNĐ)</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                      className="mt-1"
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <Label>Hình ảnh</Label>
-                    <div className="mt-1">
-                      <ImageUpload
-                        value={formData.image_url}
-                        onChange={(url) => setFormData({ ...formData, image_url: url })}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="demo_url">URL Demo</Label>
-                    <Input
-                      id="demo_url"
-                      value={formData.demo_url}
-                      onChange={(e) => setFormData({ ...formData, demo_url: e.target.value })}
-                      className="mt-1"
-                      placeholder="https://..."
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="download_url">URL Download</Label>
-                    <Input
-                      id="download_url"
-                      value={formData.download_url}
-                      onChange={(e) => setFormData({ ...formData, download_url: e.target.value })}
-                      className="mt-1"
-                      placeholder="https://..."
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      id="is_active"
-                      checked={formData.is_active}
-                      onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                    />
-                    <Label htmlFor="is_active">Hiển thị tool</Label>
-                  </div>
-                  <div className="flex gap-2 pt-4">
-                    <Button type="submit" className="flex-1">
-                      {editingTool ? "Cập nhật" : "Thêm mới"}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setIsDialogOpen(false);
-                        resetForm();
-                      }}
-                    >
-                      Hủy
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
+          <div className="flex items-center gap-3 mb-8">
+            <Shield className="h-8 w-8 text-primary" />
+            <h1 className="text-2xl font-bold">TRANG QUẢN TRỊ</h1>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div className="v-card p-4 flex items-center gap-4">
-              <div className="p-3 rounded-full bg-primary/10">
-                <Wrench className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-muted-foreground text-sm">Tổng Tool</p>
-                <p className="text-2xl font-bold">{tools.length}</p>
-              </div>
-            </div>
-            <div className="v-card p-4 flex items-center gap-4">
-              <div className="p-3 rounded-full bg-green-500/10">
-                <Eye className="h-6 w-6 text-green-500" />
-              </div>
-              <div>
-                <p className="text-muted-foreground text-sm">Tổng Lượt Xem</p>
-                <p className="text-2xl font-bold">
-                  {tools.reduce((sum, t) => sum + t.view_count, 0)}
-                </p>
-              </div>
-            </div>
-            <div className="v-card p-4 flex items-center gap-4">
-              <div className="p-3 rounded-full bg-blue-500/10">
-                <ShoppingCart className="h-6 w-6 text-blue-500" />
-              </div>
-              <div>
-                <p className="text-muted-foreground text-sm">Tổng Lượt Mua</p>
-                <p className="text-2xl font-bold">
-                  {tools.reduce((sum, t) => sum + t.sold_count, 0)}
-                </p>
-              </div>
-            </div>
-          </div>
+          <Tabs defaultValue="tools" className="space-y-6">
+            <TabsList className="grid w-full max-w-md grid-cols-2">
+              <TabsTrigger value="tools" className="flex items-center gap-2">
+                <Wrench className="h-4 w-4" />
+                Tool
+              </TabsTrigger>
+              <TabsTrigger value="categories" className="flex items-center gap-2">
+                <FolderOpen className="h-4 w-4" />
+                Danh mục
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Table */}
-          <div className="v-card overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Hình</TableHead>
-                  <TableHead>Tên Tool</TableHead>
-                  <TableHead>Giá</TableHead>
-                  <TableHead className="text-center">Xem</TableHead>
-                  <TableHead className="text-center">Mua</TableHead>
-                  <TableHead className="text-center">Trạng thái</TableHead>
-                  <TableHead className="text-right">Hành động</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tools.map((tool) => (
-                  <TableRow key={tool.id} className="hover:bg-secondary/50 transition-colors">
-                    <TableCell>
-                      <img
-                        src={tool.image_url || 'https://via.placeholder.com/50'}
-                        alt={tool.name}
-                        className="w-12 h-12 object-cover rounded"
-                      />
-                    </TableCell>
-                    <TableCell className="font-medium max-w-[200px] truncate">
-                      {tool.name}
-                    </TableCell>
-                    <TableCell className="text-primary font-bold">
-                      {tool.price === 0 ? "Miễn phí" : `${formatMoney(tool.price)}đ`}
-                    </TableCell>
-                    <TableCell className="text-center">{tool.view_count}</TableCell>
-                    <TableCell className="text-center">{tool.sold_count}</TableCell>
-                    <TableCell className="text-center">
-                      <span className={`px-2 py-1 rounded text-xs font-bold ${
-                        tool.is_active 
-                          ? "bg-green-500/10 text-green-500" 
-                          : "bg-red-500/10 text-red-500"
-                      }`}>
-                        {tool.is_active ? "Hiện" : "Ẩn"}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleEdit(tool)}
-                          className="h-8 w-8 hover:scale-110 transition-transform"
+            <TabsContent value="tools" className="space-y-6">
+              {/* Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="v-card p-4 flex items-center gap-4">
+                  <div className="p-3 rounded-full bg-primary/10">
+                    <Wrench className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-sm">Tổng Tool</p>
+                    <p className="text-2xl font-bold">{tools.length}</p>
+                  </div>
+                </div>
+                <div className="v-card p-4 flex items-center gap-4">
+                  <div className="p-3 rounded-full bg-green-500/10">
+                    <Eye className="h-6 w-6 text-green-500" />
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-sm">Tổng Lượt Xem</p>
+                    <p className="text-2xl font-bold">
+                      {tools.reduce((sum, t) => sum + t.view_count, 0)}
+                    </p>
+                  </div>
+                </div>
+                <div className="v-card p-4 flex items-center gap-4">
+                  <div className="p-3 rounded-full bg-blue-500/10">
+                    <ShoppingCart className="h-6 w-6 text-blue-500" />
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-sm">Tổng Lượt Mua</p>
+                    <p className="text-2xl font-bold">
+                      {tools.reduce((sum, t) => sum + t.sold_count, 0)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Add Tool Button */}
+              <div className="flex justify-end">
+                <Dialog open={isDialogOpen} onOpenChange={(open) => {
+                  setIsDialogOpen(open);
+                  if (!open) resetForm();
+                }}>
+                  <DialogTrigger asChild>
+                    <Button className="flex items-center gap-2 hover:scale-105 transition-transform">
+                      <Plus className="h-4 w-4" />
+                      Thêm Tool
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <Wrench className="h-5 w-5" />
+                        {editingTool ? "Sửa Tool" : "Thêm Tool Mới"}
+                      </DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                      <div>
+                        <Label htmlFor="name">Tên Tool *</Label>
+                        <Input
+                          id="name"
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          required
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="category">Danh mục</Label>
+                        <Select
+                          value={formData.category_id}
+                          onValueChange={(value) => setFormData({ ...formData, category_id: value })}
                         >
-                          <Pencil className="h-4 w-4" />
+                          <SelectTrigger className="mt-1">
+                            <SelectValue placeholder="Chọn danh mục" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Không có</SelectItem>
+                            {categories.map((category) => (
+                              <SelectItem key={category.id} value={category.id}>
+                                {category.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="description">Mô tả</Label>
+                        <Textarea
+                          id="description"
+                          value={formData.description}
+                          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                          className="mt-1"
+                          rows={3}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="price">Giá (VNĐ)</Label>
+                        <Input
+                          id="price"
+                          type="number"
+                          value={formData.price}
+                          onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                          className="mt-1"
+                          min="0"
+                        />
+                      </div>
+                      <div>
+                        <Label>Hình ảnh</Label>
+                        <div className="mt-1">
+                          <ImageUpload
+                            value={formData.image_url}
+                            onChange={(url) => setFormData({ ...formData, image_url: url })}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="demo_url">URL Demo</Label>
+                        <Input
+                          id="demo_url"
+                          value={formData.demo_url}
+                          onChange={(e) => setFormData({ ...formData, demo_url: e.target.value })}
+                          className="mt-1"
+                          placeholder="https://..."
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="download_url">URL Download</Label>
+                        <Input
+                          id="download_url"
+                          value={formData.download_url}
+                          onChange={(e) => setFormData({ ...formData, download_url: e.target.value })}
+                          className="mt-1"
+                          placeholder="https://..."
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          id="is_active"
+                          checked={formData.is_active}
+                          onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                        />
+                        <Label htmlFor="is_active">Hiển thị tool</Label>
+                      </div>
+                      <div className="flex gap-2 pt-4">
+                        <Button type="submit" className="flex-1">
+                          {editingTool ? "Cập nhật" : "Thêm mới"}
                         </Button>
                         <Button
-                          variant="destructive"
-                          size="icon"
-                          onClick={() => handleDelete(tool.id)}
-                          className="h-8 w-8 hover:scale-110 transition-transform"
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setIsDialogOpen(false);
+                            resetForm();
+                          }}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          Hủy
                         </Button>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {tools.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      Chưa có tool nào
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              {/* Table */}
+              <div className="v-card overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Hình</TableHead>
+                      <TableHead>Tên Tool</TableHead>
+                      <TableHead>Danh mục</TableHead>
+                      <TableHead>Giá</TableHead>
+                      <TableHead className="text-center">Xem</TableHead>
+                      <TableHead className="text-center">Mua</TableHead>
+                      <TableHead className="text-center">Trạng thái</TableHead>
+                      <TableHead className="text-right">Hành động</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {tools.map((tool) => (
+                      <TableRow key={tool.id} className="hover:bg-secondary/50 transition-colors">
+                        <TableCell>
+                          <img
+                            src={tool.image_url || 'https://via.placeholder.com/50'}
+                            alt={tool.name}
+                            className="w-12 h-12 object-cover rounded"
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium max-w-[150px] truncate">
+                          {tool.name}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {getCategoryName(tool.category_id)}
+                        </TableCell>
+                        <TableCell className="text-primary font-bold">
+                          {tool.price === 0 ? "Miễn phí" : `${formatMoney(tool.price)}đ`}
+                        </TableCell>
+                        <TableCell className="text-center">{tool.view_count}</TableCell>
+                        <TableCell className="text-center">{tool.sold_count}</TableCell>
+                        <TableCell className="text-center">
+                          <span className={`px-2 py-1 rounded text-xs font-bold ${
+                            tool.is_active 
+                              ? "bg-green-500/10 text-green-500" 
+                              : "bg-red-500/10 text-red-500"
+                          }`}>
+                            {tool.is_active ? "Hiện" : "Ẩn"}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => handleEdit(tool)}
+                              className="h-8 w-8 hover:scale-110 transition-transform"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                              onClick={() => handleDelete(tool.id)}
+                              className="h-8 w-8 hover:scale-110 transition-transform"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {tools.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                          Chưa có tool nào
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="categories">
+              <CategoryManager />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </MainLayout>

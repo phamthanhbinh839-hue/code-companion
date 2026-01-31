@@ -7,6 +7,11 @@ import NotificationModal from "@/components/ui/NotificationModal";
 import { Loader2, Wrench } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
+interface Category {
+  id: string;
+  name: string;
+}
+
 interface Tool {
   id: string;
   name: string;
@@ -14,6 +19,7 @@ interface Tool {
   image_url: string | null;
   view_count: number;
   sold_count: number;
+  category_id: string | null;
 }
 
 const mockSliderImages = [
@@ -24,9 +30,36 @@ const mockSliderImages = [
 const Index = () => {
   const [loading, setLoading] = useState(true);
   const [tools, setTools] = useState<Tool[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [showNotification, setShowNotification] = useState(true);
   const [notification, setNotification] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Fetch categories once
+    const fetchCategories = async () => {
+      const { data } = await supabase
+        .from('categories')
+        .select('id, name')
+        .eq('is_active', true);
+      if (data) setCategories(data);
+    };
+    fetchCategories();
+
+    // Fetch notification
+    const fetchNotification = async () => {
+      const { data: settingData } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'notification')
+        .single();
+
+      if (settingData?.value) {
+        setNotification(settingData.value);
+      }
+    };
+    fetchNotification();
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -35,7 +68,7 @@ const Index = () => {
       // Fetch tools
       let query = supabase
         .from('tools')
-        .select('id, name, price, image_url, view_count, sold_count')
+        .select('id, name, price, image_url, view_count, sold_count, category_id')
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(8);
@@ -50,24 +83,16 @@ const Index = () => {
         setTools(toolsData);
       }
 
-      // Fetch notification setting (only on first load)
-      if (!notification) {
-        const { data: settingData } = await supabase
-          .from('settings')
-          .select('value')
-          .eq('key', 'notification')
-          .single();
-
-        if (settingData?.value) {
-          setNotification(settingData.value);
-        }
-      }
-
       setLoading(false);
     };
 
     fetchData();
   }, [selectedCategory]);
+
+  const getCategoryName = (categoryId: string | null) => {
+    if (!categoryId) return undefined;
+    return categories.find(c => c.id === categoryId)?.name;
+  };
 
   return (
     <MainLayout>
@@ -130,6 +155,7 @@ const Index = () => {
                       images: tool.image_url || 'https://via.placeholder.com/300',
                       view: tool.view_count,
                       sold: tool.sold_count,
+                      categoryName: getCategoryName(tool.category_id),
                     }}
                   />
                 </div>
