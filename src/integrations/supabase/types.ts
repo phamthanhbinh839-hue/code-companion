@@ -46,6 +46,42 @@ export type Database = {
           },
         ]
       }
+      categories: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          display_order: number | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          slug?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -134,6 +170,7 @@ export type Database = {
       }
       tools: {
         Row: {
+          category_id: string | null
           created_at: string | null
           demo_url: string | null
           description: string | null
@@ -148,6 +185,7 @@ export type Database = {
           view_count: number | null
         }
         Insert: {
+          category_id?: string | null
           created_at?: string | null
           demo_url?: string | null
           description?: string | null
@@ -162,6 +200,7 @@ export type Database = {
           view_count?: number | null
         }
         Update: {
+          category_id?: string | null
           created_at?: string | null
           demo_url?: string | null
           description?: string | null
@@ -175,7 +214,15 @@ export type Database = {
           updated_at?: string | null
           view_count?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tools_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       transactions: {
         Row: {

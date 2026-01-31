@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import HeroSlider from "@/components/ui/HeroSlider";
 import ProductCard from "@/components/products/ProductCard";
+import CategoryFilter from "@/components/products/CategoryFilter";
 import NotificationModal from "@/components/ui/NotificationModal";
 import { Loader2, Wrench } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,37 +26,48 @@ const Index = () => {
   const [tools, setTools] = useState<Tool[]>([]);
   const [showNotification, setShowNotification] = useState(true);
   const [notification, setNotification] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
+      
       // Fetch tools
-      const { data: toolsData } = await supabase
+      let query = supabase
         .from('tools')
         .select('id, name, price, image_url, view_count, sold_count')
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(8);
 
+      if (selectedCategory) {
+        query = query.eq('category_id', selectedCategory);
+      }
+
+      const { data: toolsData } = await query;
+
       if (toolsData) {
         setTools(toolsData);
       }
 
-      // Fetch notification setting
-      const { data: settingData } = await supabase
-        .from('settings')
-        .select('value')
-        .eq('key', 'notification')
-        .single();
+      // Fetch notification setting (only on first load)
+      if (!notification) {
+        const { data: settingData } = await supabase
+          .from('settings')
+          .select('value')
+          .eq('key', 'notification')
+          .single();
 
-      if (settingData?.value) {
-        setNotification(settingData.value);
+        if (settingData?.value) {
+          setNotification(settingData.value);
+        }
       }
 
       setLoading(false);
     };
 
     fetchData();
-  }, []);
+  }, [selectedCategory]);
 
   return (
     <MainLayout>
@@ -85,6 +97,14 @@ const Index = () => {
               <Wrench className="h-8 w-8 text-primary animate-pulse" />
             </div>
             <div className="w-40 border-2 border-primary mx-auto mt-2"></div>
+          </div>
+
+          {/* Category Filter */}
+          <div className="mb-8">
+            <CategoryFilter 
+              selectedCategory={selectedCategory}
+              onCategoryChange={setSelectedCategory}
+            />
           </div>
 
           {loading ? (
