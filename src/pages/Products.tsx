@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import ProductCard from "@/components/products/ProductCard";
+import CategoryFilter from "@/components/products/CategoryFilter";
 import { Input } from "@/components/ui/input";
 import { Search, Loader2, Wrench } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,20 +13,29 @@ interface Tool {
   image_url: string | null;
   view_count: number;
   sold_count: number;
+  category_id: string | null;
 }
 
 const Products = () => {
   const [loading, setLoading] = useState(true);
   const [tools, setTools] = useState<Tool[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchTools = async () => {
-      const { data } = await supabase
+      setLoading(true);
+      let query = supabase
         .from('tools')
-        .select('id, name, price, image_url, view_count, sold_count')
+        .select('id, name, price, image_url, view_count, sold_count, category_id')
         .eq('is_active', true)
         .order('created_at', { ascending: false });
+
+      if (selectedCategory) {
+        query = query.eq('category_id', selectedCategory);
+      }
+
+      const { data } = await query;
 
       if (data) {
         setTools(data);
@@ -34,7 +44,7 @@ const Products = () => {
     };
 
     fetchTools();
-  }, []);
+  }, [selectedCategory]);
 
   const filteredTools = tools.filter((tool) =>
     tool.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -52,6 +62,14 @@ const Products = () => {
               <Wrench className="h-8 w-8 text-primary" />
             </div>
             <div className="w-40 border-2 border-primary mx-auto mt-2"></div>
+          </div>
+
+          {/* Category Filter */}
+          <div className="mb-6">
+            <CategoryFilter 
+              selectedCategory={selectedCategory}
+              onCategoryChange={setSelectedCategory}
+            />
           </div>
 
           {/* Search */}
