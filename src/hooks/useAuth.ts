@@ -17,22 +17,37 @@ export const useAuth = () => {
 
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-        checkAdminRole(session.user.id);
-      } else {
+    const initSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          await Promise.all([
+            fetchProfile(session.user.id),
+            checkAdminRole(session.user.id)
+          ]);
+        }
+      } catch (error) {
+        console.error('Error getting session:', error);
+      } finally {
         setLoading(false);
       }
-    });
+    };
+    
+    initSession();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        await fetchProfile(session.user.id);
-        await checkAdminRole(session.user.id);
+        try {
+          await Promise.all([
+            fetchProfile(session.user.id),
+            checkAdminRole(session.user.id)
+          ]);
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+        }
       } else {
         setProfile(null);
         setIsAdmin(false);

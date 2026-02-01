@@ -36,57 +36,67 @@ const Index = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   useEffect(() => {
-    // Fetch categories once
-    const fetchCategories = async () => {
-      const { data } = await supabase
-        .from('categories')
-        .select('id, name')
-        .eq('is_active', true);
-      if (data) setCategories(data);
-    };
-    fetchCategories();
+    // Fetch categories and notification in parallel
+    const fetchInitialData = async () => {
+      try {
+        const [categoriesResult, notificationResult] = await Promise.all([
+          supabase
+            .from('categories')
+            .select('id, name')
+            .eq('is_active', true),
+          supabase
+            .from('settings')
+            .select('value')
+            .eq('key', 'notification')
+            .maybeSingle()
+        ]);
 
-    // Fetch notification
-    const fetchNotification = async () => {
-      const { data: settingData } = await supabase
-        .from('settings')
-        .select('value')
-        .eq('key', 'notification')
-        .single();
-
-      if (settingData?.value) {
-        setNotification(settingData.value);
+        if (categoriesResult.data) {
+          setCategories(categoriesResult.data);
+        }
+        
+        if (notificationResult.data?.value) {
+          setNotification(notificationResult.data.value);
+        }
+      } catch (error) {
+        console.error('Error fetching initial data:', error);
       }
     };
-    fetchNotification();
+    
+    fetchInitialData();
   }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchTools = async () => {
       setLoading(true);
       
-      // Fetch tools
-      let query = supabase
-        .from('tools')
-        .select('id, name, price, image_url, view_count, sold_count, category_id')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
-        .limit(8);
+      try {
+        let query = supabase
+          .from('tools')
+          .select('id, name, price, image_url, view_count, sold_count, category_id')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(8);
 
-      if (selectedCategory) {
-        query = query.eq('category_id', selectedCategory);
+        if (selectedCategory) {
+          query = query.eq('category_id', selectedCategory);
+        }
+
+        const { data: toolsData, error } = await query;
+
+        if (error) {
+          console.error('Error fetching tools:', error);
+        } else {
+          setTools(toolsData || []);
+        }
+      } catch (error) {
+        console.error('Error fetching tools:', error);
+      } finally {
+        setLoading(false);
       }
-
-      const { data: toolsData } = await query;
-
-      if (toolsData) {
-        setTools(toolsData);
-      }
-
-      setLoading(false);
     };
 
-    fetchData();
+    fetchTools();
   }, [selectedCategory]);
 
   const getCategoryName = (categoryId: string | null) => {

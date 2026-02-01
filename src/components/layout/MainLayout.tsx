@@ -31,23 +31,32 @@ const MainLayout = forwardRef<HTMLDivElement, MainLayoutProps>(({ children }, re
   useEffect(() => {
     // Get initial session
     const initAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        await fetchUserData(session.user.id);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          await fetchUserData(session.user.id);
+        }
+      } catch (error) {
+        console.error('Error getting session:', error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     initAuth();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        await fetchUserData(session.user.id);
-      } else {
-        setUser(null);
-        setIsAdmin(false);
-        setCartCount(0);
+      try {
+        if (session?.user) {
+          await fetchUserData(session.user.id);
+        } else {
+          setUser(null);
+          setIsAdmin(false);
+          setCartCount(0);
+        }
+      } catch (error) {
+        console.error('Error handling auth change:', error);
       }
     });
 
@@ -55,39 +64,36 @@ const MainLayout = forwardRef<HTMLDivElement, MainLayoutProps>(({ children }, re
   }, []);
 
   const fetchUserData = async (userId: string) => {
-    // Fetch profile
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('username, money')
-      .eq('user_id', userId)
-      .single();
+    try {
+      // Fetch all data in parallel
+      const [profileResult, rolesResult, cartResult] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('username, money')
+          .eq('user_id', userId)
+          .single(),
+        supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userId),
+        supabase
+          .from('cart_items')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+      ]);
 
-    if (profile) {
-      setUser({
-        username: profile.username,
-        money: Number(profile.money) || 0,
-      });
+      if (profileResult.data) {
+        setUser({
+          username: profileResult.data.username,
+          money: Number(profileResult.data.money) || 0,
+        });
+      }
+
+      setIsAdmin(rolesResult.data?.some(r => r.role === 'admin') || false);
+      setCartCount(cartResult.count || 0);
+    } catch (error) {
+      console.error('Error fetching user data:', error);
     }
-
-    // Check admin role
-    const { data: roles } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId);
-
-    if (roles?.some(r => r.role === 'admin')) {
-      setIsAdmin(true);
-    } else {
-      setIsAdmin(false);
-    }
-
-    // Fetch cart count
-    const { count } = await supabase
-      .from('cart_items')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId);
-
-    setCartCount(count || 0);
   };
 
   return (
