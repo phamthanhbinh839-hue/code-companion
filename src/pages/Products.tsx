@@ -31,11 +31,19 @@ const Products = () => {
   useEffect(() => {
     // Fetch categories once
     const fetchCategories = async () => {
-      const { data } = await supabase
-        .from('categories')
-        .select('id, name')
-        .eq('is_active', true);
-      if (data) setCategories(data);
+      try {
+        const { data, error } = await supabase
+          .from('categories')
+          .select('id, name')
+          .eq('is_active', true);
+        if (error) {
+          console.error('Error fetching categories:', error);
+        } else if (data) {
+          setCategories(data);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
     };
     fetchCategories();
   }, []);
@@ -43,22 +51,29 @@ const Products = () => {
   useEffect(() => {
     const fetchTools = async () => {
       setLoading(true);
-      let query = supabase
-        .from('tools')
-        .select('id, name, price, image_url, view_count, sold_count, category_id')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
+      try {
+        let query = supabase
+          .from('tools')
+          .select('id, name, price, image_url, view_count, sold_count, category_id')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false });
 
-      if (selectedCategory) {
-        query = query.eq('category_id', selectedCategory);
+        if (selectedCategory) {
+          query = query.eq('category_id', selectedCategory);
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+          console.error('Error fetching tools:', error);
+        } else if (data) {
+          setTools(data);
+        }
+      } catch (error) {
+        console.error('Error fetching tools:', error);
+      } finally {
+        setLoading(false);
       }
-
-      const { data } = await query;
-
-      if (data) {
-        setTools(data);
-      }
-      setLoading(false);
     };
 
     fetchTools();

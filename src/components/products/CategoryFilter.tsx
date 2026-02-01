@@ -26,17 +26,26 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 
 export const CategoryFilter = ({ selectedCategory, onCategoryChange }: CategoryFilterProps) => {
   const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchCategories = async () => {
-      const { data } = await supabase
-        .from('categories')
-        .select('id, name, slug, icon')
-        .eq('is_active', true)
-        .order('display_order', { ascending: true });
+      try {
+        const { data, error } = await supabase
+          .from('categories')
+          .select('id, name, slug, icon')
+          .eq('is_active', true)
+          .order('display_order', { ascending: true });
 
-      if (data) {
-        setCategories(data);
+        if (error) {
+          console.error('Error fetching categories:', error);
+        } else if (data) {
+          setCategories(data);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      } finally {
+        setLoading(false);
       }
     };
 

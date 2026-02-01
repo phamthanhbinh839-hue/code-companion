@@ -29,29 +29,43 @@ const Login = () => {
 
     setLoading(true);
     
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
+      if (error) {
+        toast({
+          title: "Lỗi đăng nhập",
+          description: error.message === "Invalid login credentials" 
+            ? "Email hoặc mật khẩu không đúng" 
+            : error.message,
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       toast({
-        title: "Lỗi đăng nhập",
-        description: error.message === "Invalid login credentials" 
-          ? "Email hoặc mật khẩu không đúng" 
-          : error.message,
+        title: "Thành công",
+        description: "Đăng nhập thành công!",
+      });
+      
+      // Navigate after a short delay to ensure auth state is updated
+      setTimeout(() => {
+        navigate("/");
+      }, 100);
+    } catch (error) {
+      console.error('Login error:', error);
+      toast({
+        title: "Lỗi",
+        description: "Có lỗi xảy ra, vui lòng thử lại",
         variant: "destructive",
       });
+    } finally {
       setLoading(false);
-      return;
     }
-
-    toast({
-      title: "Thành công",
-      description: "Đăng nhập thành công!",
-    });
-    setLoading(false);
-    navigate("/");
   };
 
   return (
