@@ -358,14 +358,14 @@ const Admin = () => {
                       <div>
                         <Label htmlFor="category">Danh mục</Label>
                         <Select
-                          value={formData.category_id}
-                          onValueChange={(value) => setFormData({ ...formData, category_id: value })}
+                          value={formData.category_id || "none"}
+                          onValueChange={(value) => setFormData({ ...formData, category_id: value === "none" ? "" : value })}
                         >
                           <SelectTrigger className="mt-1">
                             <SelectValue placeholder="Chọn danh mục" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Không có</SelectItem>
+                            <SelectItem value="none">Không có</SelectItem>
                             {categories.map((category) => (
                               <SelectItem key={category.id} value={category.id}>
                                 {category.name}

@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, forwardRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { Gamepad2, Share2, TrendingUp, Code, Bot, MoreHorizontal, LayoutGrid } from "lucide-react";
+import { Gamepad2, Share2, TrendingUp, Code, Bot, MoreHorizontal, LayoutGrid, Loader2 } from "lucide-react";
 
 interface Category {
   id: string;
@@ -24,7 +24,8 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   MoreHorizontal,
 };
 
-export const CategoryFilter = ({ selectedCategory, onCategoryChange }: CategoryFilterProps) => {
+const CategoryFilter = forwardRef<HTMLDivElement, CategoryFilterProps>(
+  ({ selectedCategory, onCategoryChange }, ref) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -53,7 +54,7 @@ export const CategoryFilter = ({ selectedCategory, onCategoryChange }: CategoryF
   }, []);
 
   return (
-    <div className="flex flex-wrap gap-2 justify-center">
+    <div ref={ref} className="flex flex-wrap gap-2 justify-center">
       <button
         onClick={() => onCategoryChange(null)}
         className={cn(
@@ -87,6 +88,9 @@ export const CategoryFilter = ({ selectedCategory, onCategoryChange }: CategoryF
       })}
     </div>
   );
-};
+});
 
+CategoryFilter.displayName = "CategoryFilter";
+
+export { CategoryFilter };
 export default CategoryFilter;

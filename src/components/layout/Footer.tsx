@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { Facebook, MessageCircle, Phone, Mail, Send } from "lucide-react";
 
 interface FooterProps {
@@ -11,11 +12,11 @@ interface FooterProps {
   };
 }
 
-export const Footer = ({ settings }: FooterProps) => {
+const Footer = forwardRef<HTMLElement, FooterProps>(({ settings }, ref) => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-card border-t border-border mt-auto">
+    <footer ref={ref} className="bg-card border-t border-border mt-auto">
       <div className="mx-auto w-full max-w-6xl px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* About */}
@@ -99,6 +100,9 @@ export const Footer = ({ settings }: FooterProps) => {
       </div>
     </footer>
   );
-};
+});
 
+Footer.displayName = "Footer";
+
+export { Footer };
 export default Footer;
