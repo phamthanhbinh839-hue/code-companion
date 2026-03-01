@@ -119,21 +119,30 @@ export type Database = {
         Row: {
           amount: number
           created_at: string | null
+          expires_at: string | null
           id: string
+          rental_duration: number
+          rental_unit: string
           tool_id: string
           user_id: string
         }
         Insert: {
           amount: number
           created_at?: string | null
+          expires_at?: string | null
           id?: string
+          rental_duration?: number
+          rental_unit?: string
           tool_id: string
           user_id: string
         }
         Update: {
           amount?: number
           created_at?: string | null
+          expires_at?: string | null
           id?: string
+          rental_duration?: number
+          rental_unit?: string
           tool_id?: string
           user_id?: string
         }
@@ -284,7 +293,12 @@ export type Database = {
         }
         Returns: boolean
       }
-      purchase_tool: { Args: { p_tool_id: string }; Returns: Json }
+      purchase_tool:
+        | { Args: { p_tool_id: string }; Returns: Json }
+        | {
+            Args: { p_duration?: number; p_tool_id: string; p_unit?: string }
+            Returns: Json
+          }
     }
     Enums: {
       app_role: "admin" | "user"

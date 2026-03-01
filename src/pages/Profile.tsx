@@ -207,7 +207,7 @@ const Profile = () => {
               </TabsTrigger>
               <TabsTrigger value="purchases" className="flex items-center gap-2 py-3">
                 <ShoppingBag className="h-4 w-4" />
-                <span className="hidden sm:inline">Đã mua</span>
+                <span className="hidden sm:inline">Đã thuê</span>
               </TabsTrigger>
               <TabsTrigger value="password" className="flex items-center gap-2 py-3">
                 <Key className="h-4 w-4" />
@@ -308,7 +308,7 @@ const Profile = () => {
                                   <ArrowUpRight className="h-4 w-4 text-red-500" />
                                 )}
                                 <span className="capitalize">
-                                  {tx.type === "deposit" ? "Nạp tiền" : "Mua hàng"}
+                                  {tx.type === "deposit" ? "Nạp tiền" : "Thuê tool"}
                                 </span>
                               </div>
                             </TableCell>
@@ -337,7 +337,7 @@ const Profile = () => {
               <div className="v-card p-6">
                 <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
                   <Package className="h-5 w-5" />
-                  Sản phẩm đã mua
+                  Tool đã thuê
                 </h3>
                 
                 {loadingPurchases ? (
@@ -346,7 +346,7 @@ const Profile = () => {
                   </div>
                 ) : purchases.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    Bạn chưa mua sản phẩm nào
+                    Bạn chưa thuê tool nào
                   </div>
                 ) : (
                   <div className="overflow-x-auto">

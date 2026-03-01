@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Eye, ShoppingCart, Wrench } from "lucide-react";
+import { Eye, Clock, Wrench } from "lucide-react";
 
 export interface Product {
   id: string | number;
@@ -49,15 +49,15 @@ export const ProductCard = ({ product }: ProductCardProps) => {
             <span>Lượt xem: {product.view}</span>
           </div>
           <div className="text-center flex items-center justify-center gap-1">
-            <ShoppingCart className="h-4 w-4" />
-            <span>Lượt mua: {product.sold}</span>
+            <Clock className="h-4 w-4" />
+            <span>Lượt thuê: {product.sold}</span>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2">
           <div className="border border-primary rounded text-center py-1.5 px-2">
             <span className="v-price text-sm">
-              {product.price === 0 ? "Miễn phí" : `${formatMoney(product.price)} đ`}
+              {product.price === 0 ? "Miễn phí" : `${formatMoney(product.price)} đ/h`}
             </span>
           </div>
           <Link
