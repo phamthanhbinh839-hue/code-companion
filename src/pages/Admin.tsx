@@ -317,7 +317,7 @@ const Admin = () => {
                     <ShoppingCart className="h-6 w-6 text-blue-500" />
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-sm">Tổng Lượt Mua</p>
+                    <p className="text-muted-foreground text-sm">Tổng Lượt Thuê</p>
                     <p className="text-2xl font-bold">
                       {tools.reduce((sum, t) => sum + t.sold_count, 0)}
                     </p>
@@ -385,7 +385,7 @@ const Admin = () => {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="price">Giá (VNĐ)</Label>
+                        <Label htmlFor="price">Giá thuê/giờ (VNĐ)</Label>
                         <Input
                           id="price"
                           type="number"
@@ -462,7 +462,7 @@ const Admin = () => {
                       <TableHead>Danh mục</TableHead>
                       <TableHead>Giá</TableHead>
                       <TableHead className="text-center">Xem</TableHead>
-                      <TableHead className="text-center">Mua</TableHead>
+                      <TableHead className="text-center">Thuê</TableHead>
                       <TableHead className="text-center">Trạng thái</TableHead>
                       <TableHead className="text-right">Hành động</TableHead>
                     </TableRow>
@@ -484,7 +484,7 @@ const Admin = () => {
                           {getCategoryName(tool.category_id)}
                         </TableCell>
                         <TableCell className="text-primary font-bold">
-                          {tool.price === 0 ? "Miễn phí" : `${formatMoney(tool.price)}đ`}
+                          {tool.price === 0 ? "Miễn phí" : `${formatMoney(tool.price)}đ/h`}
                         </TableCell>
                         <TableCell className="text-center">{tool.view_count}</TableCell>
                         <TableCell className="text-center">{tool.sold_count}</TableCell>

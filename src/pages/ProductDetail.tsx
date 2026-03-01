@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { 
   ArrowLeft, 
   Eye, 
-  ShoppingCart, 
+  Clock,
   ExternalLink, 
   Loader2,
   ChevronLeft,
@@ -28,6 +28,22 @@ interface ToolDetail {
   sold_count: number;
 }
 
+type RentalUnit = 'hour' | 'day' | 'week' | 'month';
+
+const UNIT_LABELS: Record<RentalUnit, string> = {
+  hour: 'Giờ',
+  day: 'Ngày',
+  week: 'Tuần',
+  month: 'Tháng',
+};
+
+const UNIT_MULTIPLIERS: Record<RentalUnit, number> = {
+  hour: 1,
+  day: 24,
+  week: 24 * 7,
+  month: 24 * 30,
+};
+
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [loading, setLoading] = useState(true);
@@ -35,12 +51,16 @@ const ProductDetail = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const { toast } = useToast();
 
+  // Rental state
+  const [rentalUnit, setRentalUnit] = useState<RentalUnit>('hour');
+  const [rentalDuration, setRentalDuration] = useState(1);
+  const [purchasing, setPurchasing] = useState(false);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [expiresAt, setExpiresAt] = useState<string | null>(null);
+
   useEffect(() => {
     const fetchTool = async () => {
-      if (!id) {
-        setLoading(false);
-        return;
-      }
+      if (!id) { setLoading(false); return; }
 
       const { data, error } = await supabase
         .from('tools')
@@ -73,50 +93,17 @@ const ProductDetail = () => {
     return new Intl.NumberFormat("vi-VN").format(amount);
   };
 
-  const handleAddToCart = async () => {
+  const calculatedPrice = tool 
+    ? tool.price * UNIT_MULTIPLIERS[rentalUnit] * rentalDuration 
+    : 0;
+
+  const handleRentNow = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) {
       toast({
         title: "Thông báo",
-        description: "Vui lòng đăng nhập để thêm vào giỏ hàng",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const { error } = await supabase
-      .from('cart_items')
-      .upsert({
-        user_id: session.user.id,
-        tool_id: id,
-        quantity: 1,
-      });
-
-    if (error) {
-      toast({
-        title: "Lỗi",
-        description: "Không thể thêm vào giỏ hàng",
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Thành công",
-        description: "Đã thêm tool vào giỏ hàng!",
-      });
-    }
-  };
-
-  const [purchasing, setPurchasing] = useState(false);
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-
-  const handleBuyNow = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
-      toast({
-        title: "Thông báo",
-        description: "Vui lòng đăng nhập để mua hàng",
+        description: "Vui lòng đăng nhập để thuê tool",
         variant: "destructive",
       });
       return;
@@ -126,41 +113,30 @@ const ProductDetail = () => {
 
     try {
       const { data, error } = await supabase.rpc('purchase_tool', {
-        p_tool_id: id
+        p_tool_id: id,
+        p_duration: rentalDuration,
+        p_unit: rentalUnit,
       });
 
       if (error) {
-        toast({
-          title: "Lỗi",
-          description: error.message,
-          variant: "destructive",
-        });
+        toast({ title: "Lỗi", description: error.message, variant: "destructive" });
         return;
       }
 
-      const result = data as { success: boolean; message: string; download_url?: string; already_purchased?: boolean };
+      const result = data as { success: boolean; message: string; download_url?: string; already_purchased?: boolean; expires_at?: string };
 
       if (result.success) {
         toast({
           title: result.already_purchased ? "Thông báo" : "Thành công",
           description: result.message,
         });
-        if (result.download_url) {
-          setDownloadUrl(result.download_url);
-        }
+        if (result.download_url) setDownloadUrl(result.download_url);
+        if (result.expires_at) setExpiresAt(result.expires_at);
       } else {
-        toast({
-          title: "Không thể mua",
-          description: result.message,
-          variant: "destructive",
-        });
+        toast({ title: "Không thể thuê", description: result.message, variant: "destructive" });
       }
-    } catch (err) {
-      toast({
-        title: "Lỗi",
-        description: "Đã xảy ra lỗi. Vui lòng thử lại.",
-        variant: "destructive",
-      });
+    } catch {
+      toast({ title: "Lỗi", description: "Đã xảy ra lỗi. Vui lòng thử lại.", variant: "destructive" });
     } finally {
       setPurchasing(false);
     }
@@ -198,7 +174,6 @@ const ProductDetail = () => {
     <MainLayout>
       <div className="py-8 px-4">
         <div className="w-full max-w-6xl mx-auto">
-          {/* Back button */}
           <Link
             to="/products"
             className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 hover:scale-105 transition-transform"
@@ -219,21 +194,13 @@ const ProductDetail = () => {
                 {imageList.length > 1 && (
                   <>
                     <button
-                      onClick={() =>
-                        setCurrentImageIndex((prev) =>
-                          prev > 0 ? prev - 1 : imageList.length - 1
-                        )
-                      }
+                      onClick={() => setCurrentImageIndex((prev) => prev > 0 ? prev - 1 : imageList.length - 1)}
                       className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/80 hover:bg-background hover:scale-110 transition-all"
                     >
                       <ChevronLeft className="h-5 w-5" />
                     </button>
                     <button
-                      onClick={() =>
-                        setCurrentImageIndex((prev) =>
-                          prev < imageList.length - 1 ? prev + 1 : 0
-                        )
-                      }
+                      onClick={() => setCurrentImageIndex((prev) => prev < imageList.length - 1 ? prev + 1 : 0)}
                       className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/80 hover:bg-background hover:scale-110 transition-all"
                     >
                       <ChevronRight className="h-5 w-5" />
@@ -241,29 +208,6 @@ const ProductDetail = () => {
                   </>
                 )}
               </div>
-
-              {/* Thumbnails */}
-              {imageList.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto pb-2">
-                  {imageList.map((img, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setCurrentImageIndex(index)}
-                      className={`flex-shrink-0 w-16 h-16 rounded border-2 overflow-hidden hover:scale-105 transition-transform ${
-                        index === currentImageIndex
-                          ? "border-primary"
-                          : "border-border"
-                      }`}
-                    >
-                      <img
-                        src={img}
-                        alt={`Thumbnail ${index + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
 
             {/* Product Info */}
@@ -284,13 +228,9 @@ const ProductDetail = () => {
                   Lượt xem: {tool.view_count}
                 </span>
                 <span className="flex items-center gap-1">
-                  <ShoppingCart className="h-4 w-4" />
-                  Lượt mua: {tool.sold_count}
+                  <Clock className="h-4 w-4" />
+                  Lượt thuê: {tool.sold_count}
                 </span>
-              </div>
-
-              <div className="text-3xl font-bold text-primary">
-                {tool.price === 0 ? "Miễn phí" : `${formatMoney(tool.price)} đ`}
               </div>
 
               {/* Description */}
@@ -306,35 +246,82 @@ const ProductDetail = () => {
                 )}
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Button 
-                  onClick={handleBuyNow} 
-                  className="flex-1 hover:scale-[1.02] transition-transform" 
-                  size="lg"
-                  disabled={purchasing}
-                >
-                  {purchasing ? (
-                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                  ) : (
-                    <ShoppingCart className="h-5 w-5 mr-2" />
+              {/* Rental Unit Selector */}
+              <div className="space-y-4">
+                <div className="flex rounded-lg overflow-hidden border border-border">
+                  {(Object.keys(UNIT_LABELS) as RentalUnit[]).map((unit) => (
+                    <button
+                      key={unit}
+                      onClick={() => { setRentalUnit(unit); setRentalDuration(1); }}
+                      className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${
+                        rentalUnit === unit
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-secondary text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      {UNIT_LABELS[unit]}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Duration selector */}
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setRentalDuration(d => Math.max(1, d - 1))}
+                    className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-lg font-bold hover:bg-secondary/80 transition-colors"
+                  >
+                    −
+                  </button>
+                  <div className="flex-1 text-center">
+                    <span className="text-2xl font-bold text-foreground">{rentalDuration}</span>
+                    <span className="text-muted-foreground ml-2">{UNIT_LABELS[rentalUnit]}</span>
+                  </div>
+                  <button
+                    onClick={() => setRentalDuration(d => d + 1)}
+                    className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-lg font-bold hover:bg-secondary/80 transition-colors"
+                  >
+                    +
+                  </button>
+                </div>
+
+                {/* Price display */}
+                <div className="v-card p-4 text-center bg-primary/5 border-primary">
+                  <p className="text-sm text-muted-foreground mb-1">Tổng giá thuê</p>
+                  <p className="text-3xl font-bold text-primary">
+                    {tool.price === 0 ? "Miễn phí" : `${formatMoney(calculatedPrice)} đ`}
+                  </p>
+                  {tool.price > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      ({formatMoney(tool.price)} đ/giờ × {UNIT_MULTIPLIERS[rentalUnit] * rentalDuration} giờ)
+                    </p>
                   )}
-                  {tool.price === 0 ? "Nhận Miễn Phí" : "Mua Ngay"}
-                </Button>
-                <Button
-                  onClick={handleAddToCart}
-                  variant="outline"
-                  className="flex-1 hover:scale-[1.02] transition-transform"
-                  size="lg"
-                >
-                  Thêm vào giỏ hàng
-                </Button>
+                </div>
               </div>
 
-              {/* Download URL after purchase */}
+              {/* Rent Button */}
+              <Button 
+                onClick={handleRentNow} 
+                className="w-full hover:scale-[1.02] transition-transform text-lg" 
+                size="lg"
+                disabled={purchasing}
+              >
+                {purchasing ? (
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                ) : (
+                  <Wrench className="h-5 w-5 mr-2" />
+                )}
+                {tool.price === 0 ? "Nhận Miễn Phí" : "THUÊ NGAY"}
+              </Button>
+
+              {/* Download URL after rental */}
               {downloadUrl && (
                 <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
-                  <p className="text-sm font-bold text-green-500 mb-2">🎉 Mua thành công!</p>
+                  <p className="text-sm font-bold text-green-500 mb-2">🎉 Thuê thành công!</p>
+                  {expiresAt && (
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Hết hạn: {new Date(expiresAt).toLocaleString("vi-VN")}
+                    </p>
+                  )}
                   <a
                     href={downloadUrl}
                     target="_blank"
@@ -358,17 +345,6 @@ const ProductDetail = () => {
                   >
                     <ExternalLink className="h-4 w-4" />
                     Xem Demo
-                  </a>
-                )}
-                {tool.download_url && tool.price === 0 && (
-                  <a
-                    href={tool.download_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-green-500 hover:underline hover:scale-105 transition-transform w-fit"
-                  >
-                    <Download className="h-4 w-4" />
-                    Tải xuống
                   </a>
                 )}
               </div>
